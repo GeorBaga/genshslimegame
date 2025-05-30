@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анемо слаймер</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: url('https://upload-os-bbs.hoyolab.com/upload/2023/10/09/249619589/13d4969828ff54fde0c8e2634af8b5bb_769731514447414653.jpg?x-oss-process=image%2Fresize%2Cs_1000%2Fauto-orient%2C0%2Finterlace%2C1%2Fformat%2Cwebp%2Fquality%2Cq_70') no-repeat center/cover;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .slime {
+            width: 60px;
+            height: 60px;
+            background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTqeLL3iTCnHQGUEdDQA2YINXfHpj3xJ3dEDQ&s') no-repeat center/contain;
+            position: absolute;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        #timer, #score {
+            color: white;
+            font-size: 24px;
+            text-shadow: 0 0 5px #000;
+            position: fixed;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        #timer { top: 10px; left: 10px; }
+        #score { top: 10px; right: 10px; }
+        
+        #result {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: gold;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="timer">10</div>
+        <div id="score">0</div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const timerElement = document.getElementById('timer');
+        const scoreElement = document.getElementById('score');
+        const resultElement = document.getElementById('result');
+        
+        let score = 0;
+        let timeLeft = 10;
+        let gameInterval;
+        let isGameActive = true;
+        
+        // Запуск игры
+        function startGame() {
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                } else {
+                    spawnSlime();
+                }
+            }, 1000);
+        }
+        
+        // Создание слайма
+        function spawnSlime() {
+            const slime = document.createElement('div');
+            slime.className = 'slime';
+            
+            // Рандомная позиция (с учетом границ экрана)
+            const x = Math.random() * (window.innerWidth - 60);
+            const y = Math.random() * (window.innerHeight - 60);
+            
+            slime.style.left = `${x}px`;
+            slime.style.top = `${y}px`;
+            
+            // Клик по слайму
+            slime.addEventListener('click', () => {
+                if (!isGameActive) return;
+                
+                score++;
+                scoreElement.textContent = score;
+                slime.remove();
+                
+                // Эффект взрыва
+                const explosion = document.createElement('div');
+                explosion.style.position = 'absolute';
+                explosion.style.left = `${x}px`;
+                explosion.style.top = `${y}px`;
+                explosion.style.width = '60px';
+                explosion.style.height = '60px';
+                explosion.style.background = 'radial-gradient(circle, #00ffff 0%, rgba(0,255,255,0) 70%)';
+                explosion.style.borderRadius = '50%';
+                explosion.style.animation = 'fadeOut 0.5s forwards';
+                
+                gameContainer.appendChild(explosion);
+                setTimeout(() => explosion.remove(), 500);
+            });
+            
+            // Автоудаление через 1.5 сек
+            setTimeout(() => slime.remove(), 1500);
+            
+            gameContainer.appendChild(slime);
+        }
+        
+        // Завершение игры
+        function endGame() {
+            isGameActive = false;
+            clearInterval(gameInterval);
+            
+            resultElement.innerHTML = `
+                <h2>Игра окончена!</h2>
+                <p>Вы собрали: ${score} анемо слаймов</p>
+                <p>Получено: ${score * 5} примогемов</p>
+                <button onclick="sendResult()">Забрать награду</button>
+            `;
+            resultElement.style.display = 'block';
+        }
+        
+        // Отправка результатов в бота
+        function sendResult() {
+            if (window.Telegram.WebApp) {
+                Telegram.WebApp.sendData(JSON.stringify({
+                    action: "game_result",
+                    score: score
+                }));
+                Telegram.WebApp.close();
+            } else {
+                alert(`Тестовая награда: ${score * 5} примогемов`);
+            }
+        }
+        
+        // Адаптация под мобильные устройства
+        window.addEventListener('resize', () => {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        });
+        
+        startGame();
+    </script>
+</body>
+</html>
